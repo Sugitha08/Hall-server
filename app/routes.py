@@ -133,8 +133,8 @@ def verify_otp():
     
     otp_data = otp_store.get(email)
 
-    if not otp_data:
-        return jsonify({'message': 'OTP not found or expired'}), 400
+    # if not otp_data:
+    #     return jsonify({'message': 'OTP not found or expired'}), 400
     
     if systime.time() - otp_data['timestamp'] > OTP_EXPIRY_SECONDS:
         otp_store.pop(email, None)  # Remove expired OTP

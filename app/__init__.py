@@ -17,10 +17,10 @@ def create_app():
     scheduler.start()
     CORS(app, supports_credentials=True)
 
-    app.register_blueprint(auth , url_prefix='/auth')
-    app.register_blueprint(booking, url_prefix='/event')
-    app.register_blueprint(accounts, url_prefix='/account')
-    app.register_blueprint(notes, url_prefix='/notes')
-    app.register_blueprint(personal, url_prefix='/personal')
+    app.register_blueprint(auth , url_prefix='/api/auth')
+    app.register_blueprint(booking, url_prefix='/api/event')
+    app.register_blueprint(accounts, url_prefix='/api/account') 
+    app.register_blueprint(notes, url_prefix='/api/notes')
+    app.register_blueprint(personal, url_prefix='/api/personal')
 
     return app
