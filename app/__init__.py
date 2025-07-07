@@ -15,11 +15,11 @@ def create_app():
     scheduler.init_app(app)
     limiter.init_app(app)
     scheduler.start()
-    CORS(app, supports_credentials=True)
+    CORS(app, origins=["http://localhost:3000", "https://pm-hall.web.app/"], supports_credentials=True)
 
     app.register_blueprint(auth , url_prefix='/api/auth')
     app.register_blueprint(booking, url_prefix='/api/event')
-    app.register_blueprint(accounts, url_prefix='/api/account') 
+    app.register_blueprint(accounts, url_prefix='/api/account')
     app.register_blueprint(notes, url_prefix='/api/notes')
     app.register_blueprint(personal, url_prefix='/api/personal')
 
