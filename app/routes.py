@@ -31,7 +31,7 @@ OTP_EXPIRY_SECONDS = 120
 
 
 @auth.route('/admin/register', methods=['POST'])
-# @limiter.limit("5 per minute")  # Rate limit
+@limiter.limit("5 per minute")  # Rate limit
 def pub_register():    
     if Admin.query.first():
         return jsonify({"error": "Admin account already exists. Registration is closed."}), 403
@@ -78,7 +78,7 @@ def get_admin_count():
 
 
 @auth.route('/login' , methods=['POST'])
-# @limiter.limit("1 per week")
+@limiter.limit("5 per minute")
 def login():
     data = request.json
 
@@ -216,6 +216,7 @@ def create_booking():
             start_time=datetime.strptime(slot['start_time'], '%I:%M %p').time(),
             end_time=datetime.strptime(slot['end_time'], '%I:%M %p').time()
         ))
+
         due_dates = data.get('dueDates', [])
         total_remaining = 0
 
@@ -236,18 +237,19 @@ def create_booking():
         )
         db.session.add(payment)
 
-        for slot in due_dates:
+        if data.get("dueDates"):          
+          for slot in due_dates:
             expected_due_date_str = slot.get('expected_due_date')
-            if expected_due_date_str:
-                expected_due_date = datetime.strptime(expected_due_date_str, '%Y-%m-%d').date()
-            else:
-                expected_due_date = None
+            remaining = slot.get('remaining_amount')
+            print(expected_due_date_str , remaining)
+            if expected_due_date_str and remaining is not None:
+               expected_due_date = datetime.strptime(expected_due_date_str, '%Y-%m-%d').date()
 
-            db.session.add(BookingDueDate(
-                booking_id=bookingEvent.id,
-                expected_due_date=expected_due_date,
-                remaining_amount=data['remaining_amount'],
-            ))
+               db.session.add(BookingDueDate(
+                  booking_id=bookingEvent.id,
+                  expected_due_date=expected_due_date,
+                  remaining_amount=remaining,
+               ))
 
 
     if data.get("dueDates"):
@@ -737,8 +739,18 @@ def upload_image():
 
     customer_name = request.form.get('name')
     event_date = request.form.get('date')
+
+
     if not all([event_date, customer_name]):
         return jsonify({"error": "Missing required fields"}), 400
+    
+    # ✅ Check if event date already exists for the same customer
+    existing_record = CustomerRecord.query.filter_by(
+        event_date=event_date
+    ).first()
+
+    if existing_record:
+        return jsonify({'error': 'Record with this date already exists'}), 400
 
     file = request.files['image']
     if file.filename == '':

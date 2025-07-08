@@ -15,7 +15,7 @@ def create_app():
     scheduler.init_app(app)
     limiter.init_app(app)
     scheduler.start()
-    CORS(app, origins=["http://localhost:3000", "https://pm-hall.web.app"], supports_credentials=True)
+    CORS(app, supports_credentials=True)
 
     app.register_blueprint(auth , url_prefix='/api/auth')
     app.register_blueprint(booking, url_prefix='/api/event')
