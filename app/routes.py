@@ -30,6 +30,15 @@ otp_store = {}
 OTP_EXPIRY_SECONDS = 120
 
 
+@auth.route('/api/dummy1')
+def dummy1():
+    return "dummy 1 OK"
+
+@auth.route('/api/dummy2')
+def dummy2():
+    return "dummy 2 OK"
+
+
 @auth.route('/admin/register', methods=['POST'])
 @limiter.limit("5 per minute")  # Rate limit
 def pub_register():    
