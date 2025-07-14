@@ -90,7 +90,10 @@ def get_admin_count():
 @limiter.limit("5 per minute")
 def login():
     data = request.json
-
+    # if data['email'] == "admin@gmail.com" and data['password'] == "Admin@01":
+    #   access_token = create_access_token(identity=str(data['email']))
+    #   return jsonify({"access_token": access_token, "message": "Login successful"}), 200
+    
     # Check if email and password exist in request
     if not data or 'email' not in data or 'password' not in data:
         return jsonify({"error": "Invalid credentials"}), 401
@@ -106,6 +109,7 @@ def login():
         return jsonify({"error": "Stored password is invalid. Please reset your password."}), 500
     except VerifyMismatchError:
         return jsonify({"error": "Invalid email or password"}), 401
+    
     access_token = create_access_token(identity=str(admin.id))
     return jsonify({"access_token": access_token, "message": "Login successful"}), 200
 
@@ -191,7 +195,7 @@ def Get_Events():
      return jsonify({ "message": "Admin Data Successfully" ,"event_types" : result}), 200
 
 
-@booking.route('/bookings', methods=['POST'])
+@booking.route('/booking', methods=['POST'])
 @jwt_required()
 def create_booking():
     data = request.json
@@ -296,7 +300,75 @@ def create_booking():
 
     return jsonify({"message": "Booking created successfully "}), 201
 
-@booking.route('/bookings/cancel/<int:booking_id>', methods=['DELETE'])
+@booking.route('/edit_booking/<int:booking_id>', methods=['PUT'])
+@jwt_required()
+def update_booking(booking_id):
+    data = request.json
+
+    booking = Booking.query.get(booking_id)
+    if not booking:
+       return jsonify({"message": "Booking not found"}), 404
+    customer = Customer.query.get(booking.customer_id)
+    if not customer:
+      return jsonify({"message": "Customer not found"}), 404
+
+    # Update customer info
+    customer.name = data.get('customer_name', customer.name)
+    customer.mobile_number = data.get('mobile_number', customer.mobile_number)
+    customer.alt_mobile_number = data.get('alt_mobile_number', customer.alt_mobile_number)
+    customer.email = data.get('email', customer.email)
+    customer.address = data.get('address', customer.address)
+
+    # Update booking
+    booking.event_type_id = data.get('event_type_id', booking.event_type_id)
+    booking.total_amount = data.get('total_amount', booking.total_amount)
+
+    # Optional: Delete and re-add slots if needed
+    if data.get('slots'):
+     for slot_data in data['slots']:
+        slot_id = slot_data.get('slot_id')  # ID of the existing slot
+
+        if slot_id:
+            existing_slot = EventSlot.query.get(slot_id)
+            
+            # Make sure the slot belongs to the correct booking
+            if existing_slot and existing_slot.booking_id == booking.id:
+                existing_slot.event_date = datetime.strptime(slot_data['event_date'], '%Y-%m-%d').date()
+                existing_slot.start_time = datetime.strptime(slot_data['start_time'], '%I:%M %p').time()
+                existing_slot.end_time = datetime.strptime(slot_data['end_time'], '%I:%M %p').time()
+
+    # Update payment
+    payment = Payment.query.filter_by(booking_id=booking.id).first()
+    if payment:
+        total_remaining = sum(float(item.get('remaining_amount', 0)) for item in data.get('dueDates', []))
+        payment.payment_status = "Pending" if total_remaining > 0 else "Paid"
+        payment.total_amt = data.get('total_amount', payment.total_amt)
+        payment.paid_amount = data.get('paid_amount', payment.paid_amount)
+        payment.paid_date = datetime.strptime(data['paid_date'], '%Y-%m-%d').date()
+
+    # Update due dates
+    # if data.get('dueDates'):
+    #     BookingDueDate.query.filter_by(booking_id=booking.id).delete()
+    #     for due in data['dueDates']:
+    #         db.session.add(BookingDueDate(
+    #             booking_id=booking.id,
+    #             expected_due_date=datetime.strptime(due['expected_due_date'], '%Y-%m-%d').date(),
+    #             remaining_amount=due.get('remaining_amount')
+    #         ))
+
+    #     # Update Notes for due date reminders
+    #     Notes.query.filter_by(customer_id=customer.id).delete()
+    #     for due in data['dueDates']:
+    #         expected_due_date = datetime.strptime(due['expected_due_date'], '%Y-%m-%d').date()
+    #         description = f"{customer.name}'s due Date is on {expected_due_date}"
+    #         note = Notes(date=expected_due_date, description=description, customer_id=customer.id)
+    #         db.session.add(note)
+    #         schedule_reminder(description, expected_due_date, scheduler, send_reminder_email)
+
+    db.session.commit()
+    return jsonify({"message": "Booking updated successfully"}), 200
+
+@booking.route('/booking/cancel/<int:booking_id>', methods=['DELETE'])
 @jwt_required()
 def delete_booking(booking_id):
     booking = Booking.query.get(booking_id)
@@ -386,18 +458,22 @@ def calendar_view(year):
         event = EventType.query.filter_by(id=bookingDetails.event_type_id).first()
         booked_events.append({
             'booking_id': slot.booking_id,
+            'slot_id': slot.id,
             'event_date': slot.event_date.isoformat(),
             'start_time': slot.start_time.strftime('%I:%M %p') if slot.start_time else None,
             'end_time': slot.end_time.strftime('%I:%M %p') if slot.end_time else None,
+            'event_id': event.id,
             'event_type': event.name,
             'customer': {
-                'id': customer.id,
-                'name': customer.name,
+                'customer_id': customer.id,
+                'customer_name': customer.name,
                 'mobile_number': customer.mobile_number,
                 'email': customer.email,
                 'address': customer.address,
                 "payment_status":payment.payment_status,
-                "Paid_amount" : payment.paid_amount
+                "Paid_amount" : payment.paid_amount,
+                "Paid_date" : payment.paid_date,
+                "total_amount" : payment.total_amt
             } if customer else None
         })
 
