@@ -340,8 +340,8 @@ def update_booking(booking_id):
     # Update payment
     payment = Payment.query.filter_by(booking_id=booking.id).first()
     if payment:
-        total_remaining = sum(float(item.get('remaining_amount', 0)) for item in data.get('dueDates', []))
-        payment.payment_status = "Pending" if total_remaining > 0 else "Paid"
+        # total_remaining = sum(float(item.get('remaining_amount', 0)) for item in data.get('dueDates', []))
+        # payment.payment_status = "Pending" if total_remaining > 0 else "Paid"
         payment.total_amt = data.get('total_amount', payment.total_amt)
         payment.paid_amount = data.get('paid_amount', payment.paid_amount)
         payment.paid_date = datetime.strptime(data['paid_date'], '%Y-%m-%d').date()
