@@ -90,9 +90,9 @@ def get_admin_count():
 @limiter.limit("5 per minute")
 def login():
     data = request.json
-    if data['email'] == "admin@gmail.com" and data['password'] == "Admin@01":
-      access_token = create_access_token(identity=str(data['email']))
-      return jsonify({"access_token": access_token, "message": "Login successful"}), 200
+    # if data['email'] == "admin@gmail.com" and data['password'] == "Admin@01":
+    #   access_token = create_access_token(identity=str(data['email']))
+    #   return jsonify({"access_token": access_token, "message": "Login successful"}), 200
     
     # Check if email and password exist in request
     if not data or 'email' not in data or 'password' not in data:
